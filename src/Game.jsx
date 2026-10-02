@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, supabaseConfigWarning } from './supabaseClient'
 import './Game.css'
 
@@ -8,16 +8,41 @@ const MENU = [
   { id: 'pizza', name: 'Pizza slice', detail: 'Extra cheese, please', price: 4, icon: '🍕', type: 'Meals' },
   { id: 'nuggets', name: 'Chicken nuggets', detail: 'Crispy little bites', price: 5, icon: '🍗', type: 'Meals' },
   { id: 'mac', name: 'Mac & cheese', detail: 'A cozy favorite', price: 5, icon: '🧀', type: 'Meals' },
-  { id: 'wrap', name: 'Garden wrap', detail: 'Crunchy and fresh', price: 5, icon: '🌯', type: 'Meals' },
+  { id: 'wrap', name: 'Salad wrap', detail: 'Crunchy and fresh', price: 5, icon: '🌯', type: 'Meals' },
   { id: 'fries', name: 'Crispy fries', detail: 'A little salty, a lot yummy', price: 3, icon: '🍟', type: 'Sides' },
+  { id: 'hash-browns', name: 'Hash browns', detail: 'Golden and crispy', price: 3, icon: '🥔', type: 'Sides' },
   { id: 'apple', name: 'Apple slices', detail: 'Sweet and crunchy', price: 2, icon: '🍎', type: 'Sides' },
   { id: 'lemonade', name: 'Fresh lemonade', detail: 'Sunshine in a cup', price: 2, icon: '🍋', type: 'Drinks' },
+  { id: 'cappuccino', name: 'Cappuccino', detail: 'Foamy and cozy', price: 3, icon: '☕', type: 'Drinks' },
   { id: 'shake', name: 'Strawberry shake', detail: 'Cool, creamy, dreamy', price: 4, icon: '🥤', type: 'Drinks' },
   { id: 'juice', name: 'Orange juice', detail: 'A bright morning sip', price: 2, icon: '🧃', type: 'Drinks' },
   { id: 'water', name: 'Cool water', detail: 'Nice and refreshing', price: 1, icon: '💧', type: 'Drinks' },
 ]
 const FILTERS = ['Everything', 'Meals', 'Sides', 'Drinks']
 const LABELS = { new: 'New order', making: 'Cooking', ready: 'Ready!', served: 'Served' }
+let audioContext
+
+function startOrderChime() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext
+  if (!AudioContextClass) return
+  audioContext ||= new AudioContextClass()
+  if (audioContext.state === 'suspended') audioContext.resume()
+  const now = audioContext.currentTime
+  ;[880, 1174].forEach((frequency, index) => {
+    const oscillator = audioContext.createOscillator()
+    const gain = audioContext.createGain()
+    const startAt = now + index * 0.16
+    oscillator.type = 'sine'
+    oscillator.frequency.value = frequency
+    gain.gain.setValueAtTime(0.0001, startAt)
+    gain.gain.exponentialRampToValueAtTime(0.16, startAt + 0.025)
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.28)
+    oscillator.connect(gain)
+    gain.connect(audioContext.destination)
+    oscillator.start(startAt)
+    oscillator.stop(startAt + 0.3)
+  })
+}
 
 function savedOrders() {
   try {
@@ -59,9 +84,15 @@ export default function Game() {
   const [filter, setFilter] = useState('Everything')
   const [name, setName] = useState('')
   const [toast, setToast] = useState('')
+  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('sunny-side-order-sound') === 'on')
   const [syncMessage, setSyncMessage] = useState(supabaseConfigWarning
     ? 'Shared order sync settings are invalid. The game is running on this device only.'
     : '')
+  const soundEnabledRef = useRef(soundEnabled)
+  const sideRef = useRef(side)
+
+  useEffect(() => { soundEnabledRef.current = soundEnabled }, [soundEnabled])
+  useEffect(() => { sideRef.current = side }, [side])
 
   useEffect(() => { localStorage.setItem('sunny-side-orders', JSON.stringify(orders)) }, [orders])
 
@@ -76,7 +107,10 @@ export default function Game() {
     const channel = supabase.channel('sunny-side-orders')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, ({ eventType, new: row, old }) => {
         if (eventType === 'DELETE') setOrders((current) => current.filter((order) => order.id !== old.id))
-        else setOrders((current) => upsertOrder(current, mapOrder(row)))
+        else {
+          if (eventType === 'INSERT' && soundEnabledRef.current && sideRef.current === 'store') startOrderChime()
+          setOrders((current) => upsertOrder(current, mapOrder(row)))
+        }
       })
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') setSyncMessage('Live updates paused. Check your connection.')
@@ -100,6 +134,13 @@ export default function Game() {
       else next[id] = quantity
       return next
     })
+  }
+
+  function toggleOrderSound() {
+    const next = !soundEnabled
+    if (next) startOrderChime()
+    setSoundEnabled(next)
+    localStorage.setItem('sunny-side-order-sound', next ? 'on' : 'off')
   }
 
   async function sendOrder(event) {
@@ -169,7 +210,7 @@ export default function Game() {
         </div>
       </> : <section className="store-area">
         <div className="intro store-intro"><div><p className="eyebrow">✳ &nbsp;SUNNY SIDE KITCHEN</p><h1>Order <em>up.</em></h1><p className="intro-copy">Make something wonderful. Your customers are hungry!</p></div><div className="ticket-stack"><span>ORDERS</span><strong>{String(openOrders.length).padStart(2, '0')}</strong><small>IN THE KITCHEN</small></div></div>
-        <div className="queue-heading"><div><span className="kicker">THE PASS</span><h2>Kitchen tickets <b>{openOrders.length}</b></h2></div><div className="status-key"><span>New</span><span>Cooking</span><span>Ready</span></div></div>
+        <div className="queue-heading"><div><span className="kicker">THE PASS</span><h2>Kitchen tickets <b>{openOrders.length}</b></h2></div><div className="queue-tools"><div className="status-key"><span>New</span><span>Cooking</span><span>Ready</span></div><button className={`sound-toggle ${soundEnabled ? 'sound-on' : ''}`} type="button" aria-pressed={soundEnabled} onClick={toggleOrderSound}><span aria-hidden="true">{soundEnabled ? '🔔' : '🔕'}</span>{soundEnabled ? 'Sound on' : 'Enable sound'}</button></div></div>
         {!openOrders.length ? <div className="empty-kitchen"><span>🍳</span><h3>All caught up!</h3><p>The counter is quiet. Place an order on the customer side to get cooking.</p><button onClick={() => setSide('customer')}>Go to customer side <span>↗</span></button></div> : <div className="orders-grid">{openOrders.map((order) => <article className={`kitchen-ticket ticket-${order.status}`} key={order.id}>
           <div className="ticket-head"><div><span className="ticket-number">TICKET {order.id.slice(0, 4).toUpperCase()}</span><h3>{order.customer}</h3></div><span className={`status-chip chip-${order.status}`}><i />{LABELS[order.status]}</span></div>
           <p className="ticket-time">{order.timeLabel}</p>

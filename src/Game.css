@@ -113,6 +113,11 @@ button { cursor: pointer; }
 .queue-heading h2 { display: flex; align-items: center; gap: 10px; font-size: 26px; }
 .queue-heading h2 b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: var(--green); background: #e5ede3; font: 700 11px 'DM Sans', sans-serif; }
 .status-key { display: flex; gap: 16px; color: #747b72; font-size: 10px; }
+.queue-tools { display: flex; align-items: center; gap: 16px; }
+.sound-toggle { display: flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 11px; border: 1px solid #deded3; border-radius: 4px; color: #667168; background: #fffdf8; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.sound-toggle:hover { border-color: #9cb59d; color: var(--green-dark); }
+.sound-toggle.sound-on { border-color: #c8dcc8; color: var(--green-dark); background: #edf4eb; }
+.sound-toggle > span { font-size: 14px; }
 .status-key span::before { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: #e3ac4d; content: ''; }
 .status-key span:nth-child(2)::before { background: #62916f; }
 .status-key span:nth-child(3)::before { background: #d9563e; }
@@ -204,6 +209,8 @@ button { cursor: pointer; }
   .ticket-stack strong { font-size: 39px; }
   .ticket-stack span, .ticket-stack small { font-size: 7px; }
   .queue-heading { padding: 0 2px 13px; }
+  .queue-tools { flex-wrap: wrap; justify-content: space-between; width: 100%; gap: 9px; }
+  .sound-toggle { min-height: 32px; padding: 0 9px; }
   .status-key { gap: 8px; font-size: 9px; }
   .status-key span::before { margin-right: 4px; }
   .orders-grid { grid-template-columns: 1fr; gap: 10px; padding-top: 12px; }
