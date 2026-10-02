@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from './supabaseClient'
+import { supabase, supabaseConfigWarning } from './supabaseClient'
 import './Game.css'
 
 const MENU = [
@@ -59,7 +59,9 @@ export default function Game() {
   const [filter, setFilter] = useState('Everything')
   const [name, setName] = useState('')
   const [toast, setToast] = useState('')
-  const [syncMessage, setSyncMessage] = useState('')
+  const [syncMessage, setSyncMessage] = useState(supabaseConfigWarning
+    ? 'Shared order sync settings are invalid. The game is running on this device only.'
+    : '')
 
   useEffect(() => { localStorage.setItem('sunny-side-orders', JSON.stringify(orders)) }, [orders])
 
