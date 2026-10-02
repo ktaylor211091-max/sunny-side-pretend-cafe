@@ -1,0 +1,16 @@
+{
+  "name": "Sunny Side Pretend Cafe",
+  "short_name": "Sunny Side",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f8f6ef",
+  "theme_color": "#f8f6ef",
+  "icons": [
+    {
+      "src": "./sunny-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
